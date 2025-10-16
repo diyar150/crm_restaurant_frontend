@@ -71,3 +71,4 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/t
 # crm_db_react
 # react_crm
 # crm_db_react
+# crm_restaurant_frontend
