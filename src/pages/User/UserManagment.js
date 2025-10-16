@@ -45,7 +45,6 @@ function UserManagment({ isDrawerOpen }) {
   branch_id: '',
   password: '',
   is_system_user: 0,
-  is_agent: 0,
   search: '',
   salary: 0
 };
@@ -234,7 +233,6 @@ const handleEditClick = async (user) => {
       branch_id: data.branch_id || '',
       password: '',
       is_system_user: Number(data.is_system_user) || 0, // Always a number
-      is_agent: Number(data.is_agent) || 0,
       salary: data.salary !== undefined ? data.salary : 0, // <-- Add this line
 
     });
@@ -419,20 +417,6 @@ const handleSearchChange = async (e) => {
                   </MenuItem>
                 ))}
               </TextField>
-              <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={!!formData.is_agent}
-                      onChange={e => setFormData(prev => ({
-                        ...prev,
-                        is_agent: e.target.checked ? 1 : 0
-                      }))}
-                      name="is_agent"
-                      color="primary"
-                    />
-                  }
-                  label="بتوانێت وەک مەندووب کار بکات"
-                />
 
                <FormControlLabel
                   control={
@@ -548,7 +532,6 @@ const handleSearchChange = async (e) => {
                     <TableCell>ناوی بەکارهێنەر</TableCell>
                     <TableCell>ژمارەی تەلەفۆن</TableCell>
                     <TableCell>مووچە</TableCell>
-                    <TableCell>مەندووب</TableCell>
 
                     <TableCell>لق</TableCell>
                     <TableCell>Action</TableCell>
@@ -578,11 +561,6 @@ const handleSearchChange = async (e) => {
                         <TableCell>
                           {formatNumberWithCommas(Number(user.salary).toFixed(0))}
                         </TableCell>
-                       <TableCell>
-                            <span style={{ color: user.is_agent ? 'green' : 'inherit', fontWeight: user.is_agent ? 'bold' : 'normal' }}>
-                              {user.is_agent ? 'بەڵێ' : 'نەخێر'}
-                            </span>
-                          </TableCell>
                         <TableCell>
                           {branches.find((b) => b.id === user.branch_id)?.name || user.branch_id}
                         </TableCell>

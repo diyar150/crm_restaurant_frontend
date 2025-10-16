@@ -18,10 +18,11 @@ const initialFormData = {
   type: '',
   address: '',
   city_id: '0',
-  region_id: '0',
   phone_1: '',
   phone_2: '',
-  user_id: '0',
+  latitude: '',
+  longitude: '',
+  radius_meters: '',
   opening_date: today,
   state: 'چالاک'
 };
@@ -34,8 +35,6 @@ function BranchRegister({ isDrawerOpen }) {
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [companies, setCompanies] = useState([]);
   const [cities, setCities] = useState([]);
-  const [regions, setRegions] = useState([]);
-  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
@@ -45,16 +44,12 @@ function BranchRegister({ isDrawerOpen }) {
   const fetchOptions = useCallback(async () => {
     setLoading(true);
     try {
-      const [companyRes, cityRes, regionRes, userRes] = await Promise.all([
+      const [companyRes, cityRes] = await Promise.all([
         axiosInstance.get('/company/index'),
         axiosInstance.get('/city/index'),
-        axiosInstance.get('/region/index'),
-        axiosInstance.get('/user/index')
       ]);
       setCompanies(companyRes.data || []);
       setCities(cityRes.data || []);
-      setRegions(regionRes.data || []);
-      setUsers(userRes.data || []);
     } catch (error) {
       setSnackbarSeverity('error');
       setSnackbarMessage('هەڵە لە بارکردنی داتای سەرەکی');
@@ -77,10 +72,11 @@ function BranchRegister({ isDrawerOpen }) {
             type: data.type || '',
             address: data.address || '',
             city_id: String(data.city_id || '0'),
-            region_id: String(data.region_id || '0'),
             phone_1: data.phone_1 || '',
             phone_2: data.phone_2 || '',
-            user_id: String(data.user_id || '0'),
+            latitude: data.latitude || '',
+            longitude: data.longitude || '',
+            radius_meters: data.radius_meters || '',
             opening_date: data.opening_date ? new Date(data.opening_date).toISOString().split('T')[0] : today,
             state: data.state || 'چالاک',
           });
@@ -111,8 +107,6 @@ function BranchRegister({ isDrawerOpen }) {
     if (!formData.name.trim()) newErrors.name = 'ناوی بەش پێویستە بنووسرێت';
     if (!formData.phone_1.trim()) newErrors.phone_1 = 'ژمارەی مۆبایل١ پێویستە بنووسرێت';
     if (!formData.city_id || formData.city_id === '0') newErrors.city_id = 'ناوی شار پێویستە بنووسرێت';
-    if (!formData.region_id || formData.region_id === '0') newErrors.region_id = 'ناوی ناوچە پێویستە بنووسرێت';
-    if (!formData.user_id || formData.user_id === '0') newErrors.user_id = 'ناوی بەکارهێنەر پێویستە بنووسرێت';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -127,14 +121,26 @@ function BranchRegister({ isDrawerOpen }) {
     }
     setLoading(true);
     try {
-      let response;
+      const payload = {
+        company_id: formData.company_id,
+        name: formData.name.trim(),
+        address: formData.address || null,
+        latitude: formData.latitude || null,
+        longitude: formData.longitude || null,
+        radius_meters: formData.radius_meters ? Number(formData.radius_meters) : 0,
+        wallet: formData.wallet ? Number(formData.wallet) : 0,
+        city_id: formData.city_id,
+        opening_date: formData.opening_date,
+        state: formData.state,
+      };
+
       if (id) {
-        response = await axiosInstance.put(`/branch/update/${id}`, formData);
+        await axiosInstance.put(`/branch/update/${id}`, payload);
         setSnackbarSeverity('success');
         setSnackbarMessage('زانیاری بەشەکە نوێکرایەوە');
         navigate('/branch');
       } else {
-        response = await axiosInstance.post('/branch/store', formData);
+        await axiosInstance.post('/branch/store', payload);
         setSnackbarSeverity('success');
         setSnackbarMessage('بەشەکە بە سەرکەوتوویی تۆمارکرا');
         resetForm(setFormData, initialFormData);
@@ -166,7 +172,6 @@ function BranchRegister({ isDrawerOpen }) {
   if (loading) {
     return <LoadingSpinner message="چاوەڕوان بن..." />;
   }
-
   return (
     <Box sx={{ marginRight: isDrawerOpen ? '250px' : '0', transition: 'margin-right 0.3s' }}>
       <Card sx={{ margin: 1 }}>
@@ -177,7 +182,7 @@ function BranchRegister({ isDrawerOpen }) {
           </Box>
           <form onSubmit={handleSubmit} autoComplete="off">
             <Grid container spacing={2}>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth select label="کۆمپانیا" name="company_id" value={formData.company_id}
                   onChange={handleChange} error={!!errors.company_id} helperText={errors.company_id}
@@ -188,7 +193,7 @@ function BranchRegister({ isDrawerOpen }) {
                   ))}
                 </TextField>
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth label="ناوی بەش" name="name" value={formData.name}
                   onChange={handleChange} error={!!errors.name} helperText={errors.name}
@@ -203,21 +208,7 @@ function BranchRegister({ isDrawerOpen }) {
                   }}
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth label="جۆری بەش" name="type" value={formData.type}
-                  onChange={handleChange}
-                  InputProps={{
-                    endAdornment: formData.type && (
-                      <InputAdornment position="end">
-                        <IconButton aria-label="clear type" onClick={() => clearTextField(setFormData, 'type')} edge="end">
-                          <ClearIcon />
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
+
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth label="ناونیشان" name="address" value={formData.address}
@@ -274,28 +265,7 @@ function BranchRegister({ isDrawerOpen }) {
                   ))}
                 </TextField>
               </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth select label="ناوچە" name="region_id" value={formData.region_id}
-                  onChange={handleChange} error={!!errors.region_id} helperText={errors.region_id}
-                >
-                  <MenuItem value="0" disabled>ناوچە هەڵبژێرە</MenuItem>
-                  {regions.map((region) => (
-                    <MenuItem key={region.id} value={region.id}>{region.name}</MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth select label="بەڕێوبەر" name="user_id" value={formData.user_id}
-                  onChange={handleChange} error={!!errors.user_id} helperText={errors.user_id}
-                >
-                  <MenuItem value="0" disabled>بەڕێوبەر هەڵبژێرە</MenuItem>
-                  {users.map((user) => (
-                    <MenuItem key={user.id} value={user.id}>{user.name}</MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
+
               <Grid item xs={12} md={4}>
                 <TextField
                   fullWidth label="رێکەوتی کرانەوە" name="opening_date" type="date"
@@ -312,6 +282,54 @@ function BranchRegister({ isDrawerOpen }) {
                   <MenuItem value="ناچالاک">ناچالاک</MenuItem>
                 </TextField>
               </Grid>
+                <Grid item xs={12} md={4}>
+    <TextField
+      fullWidth label="Latitude" name="latitude" value={formData.latitude}
+      onChange={handleChange}
+      type="number"
+      InputProps={{
+        endAdornment: formData.latitude && (
+          <InputAdornment position="end">
+            <IconButton aria-label="clear latitude" onClick={() => clearTextField(setFormData, 'latitude')} edge="end">
+              <ClearIcon />
+            </IconButton>
+          </InputAdornment>
+        ),
+      }}
+    />
+  </Grid>
+  <Grid item xs={12} md={4}>
+    <TextField
+      fullWidth label="Longitude" name="longitude" value={formData.longitude}
+      onChange={handleChange}
+      type="number"
+      InputProps={{
+        endAdornment: formData.longitude && (
+          <InputAdornment position="end">
+            <IconButton aria-label="clear longitude" onClick={() => clearTextField(setFormData, 'longitude')} edge="end">
+              <ClearIcon />
+            </IconButton>
+          </InputAdornment>
+        ),
+      }}
+    />
+  </Grid>
+  <Grid item xs={12} md={4}>
+    <TextField
+      fullWidth label="Radius (meters)" name="radius_meters" value={formData.radius_meters}
+      onChange={handleChange}
+      type="number"
+      InputProps={{
+        endAdornment: formData.radius_meters && (
+          <InputAdornment position="end">
+            <IconButton aria-label="clear radius_meters" onClick={() => clearTextField(setFormData, 'radius_meters')} edge="end">
+              <ClearIcon />
+            </IconButton>
+          </InputAdornment>
+        ),
+      }}
+    />
+  </Grid>
               <Grid item xs={9}>
                 <Button fullWidth type="submit" color="success" variant="contained" disabled={loading}>
                   {id ? 'نوێکردنەوە' : 'تۆمارکردن'}

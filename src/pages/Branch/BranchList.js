@@ -51,7 +51,8 @@ function BranchList({ isDrawerOpen }) {
   const [selectedBranchId, setSelectedBranchId] = useState(null);
   const [filterCityId, setFilterCityId] = useState('');
   const [filterRegionId, setFilterRegionId] = useState('');
-  const [filterUserId, setFilterUserId] = useState('');
+  // user filter is currently read-only in the UI; keep the state value for query params
+  const [filterUserId] = useState('');
   const [totalCount, setTotalCount] = useState(0);
   const [sortBy, setSortBy] = useState('id');
   const [sortOrder, setSortOrder] = useState('asc');
