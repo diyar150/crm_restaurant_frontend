@@ -14,9 +14,7 @@ import {
   Category,
   AccountBalanceWallet,
   SellOutlined,
-  Warehouse,
   PersonOutline,
-  ShoppingCart as ShoppingCartIcon
 } from '@mui/icons-material';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
@@ -28,8 +26,6 @@ const Sidebar = () => {
   const [nestedEmployeeOpen, setEmployeeNestedOpen] = useState(false);
   const [nestedItemOpen, setItemNestedOpen] = useState(false);
   const [nestedExpensesOpen, setExpensesNestedOpen] = useState(false);
-  const [nestedWarehouseOpen, setWarehouseNestedOpen] = useState(false);
-  const [nestedBuyOpen, setBuyNestedOpen] = useState(false);
   const [nestedSellOpen, setSellNestedOpen] = useState(false);
 
   const toggleDrawer = () => setOpen((prev) => !prev);
@@ -38,8 +34,6 @@ const Sidebar = () => {
   const handleEmployeeNestedToggle = () => setEmployeeNestedOpen((prev) => !prev);
   const handleExpensesNestedToggle = () => setExpensesNestedOpen((prev) => !prev);
   const handleItemNestedToggle = () => setItemNestedOpen((prev) => !prev);
-  const handleWarehouseNestedToggle = () => setWarehouseNestedOpen((prev) => !prev);
-  const handleBuyNestedToggle = () => setBuyNestedOpen((prev) => !prev);
   const handleSellNestedToggle = () => setSellNestedOpen((prev) => !prev);
 
   const hideToggle = location.pathname === '/' || location.pathname === '/login';
@@ -57,17 +51,6 @@ const Sidebar = () => {
     navigate('/');
   };
 
-  // Keyboard shortcut: Ctrl+B or Cmd+B to toggle sidebar
-  // useEffect(() => {
-  //   const handleKeyDown = (e) => {
-  //     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
-  //       e.preventDefault();
-  //       toggleDrawer();
-  //     }
-  //   };
-  //   window.addEventListener('keydown', handleKeyDown);
-  //   return () => window.removeEventListener('keydown', handleKeyDown);
-  // }, []); // No need to depend on open
 
   // open and close the sidebar by space button
     useEffect(() => {
@@ -148,31 +131,7 @@ const Sidebar = () => {
                 <ListItem button component={Link} to="/sell-invoice">
                   <ListItemText inset primary="فرۆشتنەکان" sx={getTextStyles()} />
                 </ListItem>
-                <ListItem button component={Link} to="/sell-return-invoice">
-                  <ListItemText inset primary="وەرگرتنەوەی کاڵا" sx={getTextStyles()} />
-                </ListItem>
-              </List>
-              <Divider sx={{ backgroundColor: 'white' }} />
-            </Collapse>
 
-
-
-            {/* Buy Invoice */}
-            <ListItem button onClick={handleBuyNestedToggle} aria-expanded={nestedBuyOpen}>
-              <ListItemIcon sx={{ color: 'white' }}>
-                <ShoppingCartIcon />
-              </ListItemIcon>
-              <ListItemText primary="بەشی کڕین" sx={getTextStyles()} />
-              {nestedBuyOpen ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />}
-            </ListItem>
-            <Collapse in={nestedBuyOpen} timeout="auto" unmountOnExit>
-              <List component="div" disablePadding>
-                <ListItem button component={Link} to="/buy-invoice">
-                  <ListItemText inset primary="کڕینەکان" sx={getTextStyles()} />
-                </ListItem>
-                <ListItem button component={Link} to="/buy-return-invoice">
-                  <ListItemText inset primary="گەڕانەوەی کاڵا" sx={getTextStyles()} />
-                </ListItem>
               </List>
               <Divider sx={{ backgroundColor: 'white' }} />
             </Collapse>
@@ -228,18 +187,14 @@ const Sidebar = () => {
                 <ListItem button component={Link} to="/item/category">
                   <ListItemText inset primary=" گرووپەکان" sx={getTextStyles()} />
                 </ListItem>
-                <ListItem button component={Link} to="/item/brand">
-                  <ListItemText inset primary=" براندەکان" sx={getTextStyles()} />
-                </ListItem>
+
                 <ListItem button component={Link} to="/item/unit">
                   <ListItemText inset primary=" یەکەکان" sx={getTextStyles()} />
                 </ListItem>
                 <ListItem button component={Link} to="/item/price/type">
                   <ListItemText inset primary="جۆری نرخەکان" sx={getTextStyles()} />
                 </ListItem>
-                <ListItem button component={Link} to="/serial">
-                  <ListItemText inset primary="بەشی سریاڵ" sx={getTextStyles()} />
-                </ListItem>
+
               </List>
               <Divider sx={{ backgroundColor: 'white' }} />
             </Collapse>
@@ -260,9 +215,7 @@ const Sidebar = () => {
                 <ListItem button component={Link} to="/salary">
                   <ListItemText inset primary=" مووچەدان" sx={getTextStyles()} />
                 </ListItem>
-                <ListItem button component={Link} to="/currency-rate">
-                  <ListItemText inset primary="نرخی دراوەکان" sx={getTextStyles()} />
-                </ListItem>
+    
               </List>
               <Divider sx={{ backgroundColor: 'white' }} />
             </Collapse>
@@ -287,32 +240,6 @@ const Sidebar = () => {
               <Divider sx={{ backgroundColor: 'white' }} />
             </Collapse>
 
-            {/* Warehouse Section */}
-            <ListItem button onClick={handleWarehouseNestedToggle} aria-expanded={nestedWarehouseOpen}>
-              <ListItemIcon sx={{ color: 'white' }}>
-                <Warehouse />
-              </ListItemIcon>
-              <ListItemText primary="کۆگا" sx={getTextStyles()} />
-              {nestedWarehouseOpen ? <ExpandLess sx={{ color: 'white' }} /> : <ExpandMore sx={{ color: 'white' }} />}
-            </ListItem>
-            <Collapse in={nestedWarehouseOpen} timeout="auto" unmountOnExit>
-              <ListItem button component={Link} to="/warehouse">
-                <ListItemText inset primary="زیادکردن" sx={getTextStyles()} />
-              </ListItem>
-              <ListItem button component={Link} to="/item/transaction">
-                <ListItemText inset primary="ڕێکخستن" sx={getTextStyles()} />
-              </ListItem>
-              <ListItem button component={Link} to="/item/transfer">
-                <ListItemText inset primary="گواستنەوە" sx={getTextStyles()} />
-              </ListItem>
-              <ListItem button component={Link} to="/item/damage">
-                <ListItemText inset primary="خەسارچوو" sx={getTextStyles()} />
-              </ListItem>
-              <ListItem button component={Link} to="/item/quantity">
-                <ListItemText inset primary="زانیاری کۆگا" sx={getTextStyles()} />
-              </ListItem>
-              <Divider sx={{ backgroundColor: 'white' }} />
-            </Collapse>
 
             {/* Company Section */}
             <ListItem button onClick={handleCompanyNestedToggle} aria-expanded={nestedCompanyOpen}>
@@ -330,21 +257,12 @@ const Sidebar = () => {
                 <ListItem button component={Link} to="/city/">
                   <ListItemText inset primary="شارەکان" sx={getTextStyles()} />
                 </ListItem>
-                <ListItem button component={Link} to="/zone/">
-                  <ListItemText inset primary="زۆنەکان" sx={getTextStyles()} />
-                </ListItem>
-                <ListItem button component={Link} to="/region/">
-                  <ListItemText inset primary="گەڕەکەکان" sx={getTextStyles()} />
-                </ListItem>
+  
+   
                 <ListItem button component={Link} to="/branch/">
                   <ListItemText inset primary="لقەکان" sx={getTextStyles()} />
                 </ListItem>
-                 <ListItem button component={Link} to="/driver">
-                  <ListItemText inset primary="شۆفێرەکان" sx={getTextStyles()} />
-                </ListItem>
-                <ListItem button component={Link} to="/currency">
-                  <ListItemText inset primary="دراوەکان" sx={getTextStyles()} />
-                </ListItem>
+  
               </List>
               <Divider sx={{ backgroundColor: 'white' }} />
             </Collapse>
