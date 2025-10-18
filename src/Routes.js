@@ -30,6 +30,9 @@ const BranchManagment = lazy(() => import('./pages/Branch/BranchRegister'));
 const BranchList = lazy(() => import('./pages/Branch/BranchList'));
 const TableManagment = lazy(() => import('./pages/Table/TableManagment'));
 
+// Printer management
+const PrinterManagment = lazy(() => import('./pages/Printer/PrinterManagment'));
+
 // Sell invoice
 
 const SellCreate = lazy(() => import('./pages/Sell/SellCreate'));
@@ -62,6 +65,7 @@ const RoutesComponent = () => {
 
         <Route path="/branch" element={<ProtectedRoute element={<BranchList />} />} />
         <Route path="/table" element={<ProtectedRoute element={<TableManagment />} />} />
+        <Route path="/printer" element={<ProtectedRoute element={<PrinterManagment />} />} />
 
 
         {/* Customer category */}

@@ -265,6 +265,9 @@ const Sidebar = () => {
                 <ListItem button component={Link} to="/table/">
                   <ListItemText inset primary="مێزەکان" sx={getTextStyles()} />
                 </ListItem>
+                  <ListItem button component={Link} to="/printer/">
+                  <ListItemText inset primary="پرینتەرەکان" sx={getTextStyles()} />
+                </ListItem>
   
               </List>
               <Divider sx={{ backgroundColor: 'white' }} />
