@@ -10,20 +10,14 @@ import CloseIcon from '@mui/icons-material/Close';
 import { clearTextField, handleChange as handleChangeUtil, resetForm } from '../../components/utils/formUtils';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 
-const today = new Date().toISOString().split('T')[0];
-
 const initialFormData = {
   company_id: '0',
   name: '',
-  type: '',
   address: '',
   city_id: '0',
-  phone_1: '',
-  phone_2: '',
   latitude: '',
   longitude: '',
   radius_meters: '',
-  opening_date: today,
   state: 'چالاک'
 };
 
@@ -69,15 +63,11 @@ function BranchRegister({ isDrawerOpen }) {
           setFormData({
             company_id: String(data.company_id || '0'),
             name: data.name || '',
-            type: data.type || '',
             address: data.address || '',
             city_id: String(data.city_id || '0'),
-            phone_1: data.phone_1 || '',
-            phone_2: data.phone_2 || '',
             latitude: data.latitude || '',
             longitude: data.longitude || '',
             radius_meters: data.radius_meters || '',
-            opening_date: data.opening_date ? new Date(data.opening_date).toISOString().split('T')[0] : today,
             state: data.state || 'چالاک',
           });
         }
@@ -105,7 +95,6 @@ function BranchRegister({ isDrawerOpen }) {
     const newErrors = {};
     if (!formData.company_id || formData.company_id === '0') newErrors.company_id = 'ناوی کۆمپانیا پێویستە بنووسرێت';
     if (!formData.name.trim()) newErrors.name = 'ناوی بەش پێویستە بنووسرێت';
-    if (!formData.phone_1.trim()) newErrors.phone_1 = 'ژمارەی مۆبایل١ پێویستە بنووسرێت';
     if (!formData.city_id || formData.city_id === '0') newErrors.city_id = 'ناوی شار پێویستە بنووسرێت';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -125,12 +114,10 @@ function BranchRegister({ isDrawerOpen }) {
         company_id: formData.company_id,
         name: formData.name.trim(),
         address: formData.address || null,
-        latitude: formData.latitude || null,
-        longitude: formData.longitude || null,
+        latitude: formData.latitude ? Number(formData.latitude) : 0,
+        longitude: formData.longitude ? Number(formData.longitude) : 0,
         radius_meters: formData.radius_meters ? Number(formData.radius_meters) : 0,
-        wallet: formData.wallet ? Number(formData.wallet) : 0,
         city_id: formData.city_id,
-        opening_date: formData.opening_date,
         state: formData.state,
       };
 
@@ -147,12 +134,19 @@ function BranchRegister({ isDrawerOpen }) {
       }
       setOpenSnackbar(true);
     } catch (error) {
-      const backendError = error.response?.data?.error?.toLowerCase() || '';
-      if (
-        backendError.includes('unique') ||
-        backendError.includes('duplicate') ||
-        backendError.includes('branch name') ||
-        backendError.includes('already exists')
+      // Prefer backend-provided message (may be localized). Fall back to heuristics otherwise.
+      console.error('Branch submit error:', error);
+      const backendErrorRaw = error.response?.data?.error || error.response?.data?.message || error.message || '';
+      const backendErrorLower = String(backendErrorRaw).toLowerCase();
+
+      if (backendErrorRaw) {
+        setSnackbarSeverity('error');
+        setSnackbarMessage(backendErrorRaw);
+      } else if (
+        backendErrorLower.includes('unique') ||
+        backendErrorLower.includes('duplicate') ||
+        backendErrorLower.includes('branch name') ||
+        backendErrorLower.includes('already exists')
       ) {
         setSnackbarSeverity('error');
         setSnackbarMessage('ناوی بەش پێشتر تۆمارکراوە!');
@@ -224,37 +218,9 @@ function BranchRegister({ isDrawerOpen }) {
                   }}
                 />
               </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  fullWidth label="ژمارەی مۆبایل١" name="phone_1" value={formData.phone_1}
-                  onChange={handleChange} error={!!errors.phone_1} helperText={errors.phone_1}
-                  InputProps={{
-                    endAdornment: formData.phone_1 && (
-                      <InputAdornment position="end">
-                        <IconButton aria-label="clear phone_1" onClick={() => clearTextField(setFormData, 'phone_1')} edge="end">
-                          <ClearIcon />
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  fullWidth label="ژمارەی مۆبایل٢" name="phone_2" value={formData.phone_2}
-                  onChange={handleChange}
-                  InputProps={{
-                    endAdornment: formData.phone_2 && (
-                      <InputAdornment position="end">
-                        <IconButton aria-label="clear phone_2" onClick={() => clearTextField(setFormData, 'phone_2')} edge="end">
-                          <ClearIcon />
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
+
+              
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth select label="شار" name="city_id" value={formData.city_id}
                   onChange={handleChange} error={!!errors.city_id} helperText={errors.city_id}
@@ -266,14 +232,7 @@ function BranchRegister({ isDrawerOpen }) {
                 </TextField>
               </Grid>
 
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth label="رێکەوتی کرانەوە" name="opening_date" type="date"
-                  InputLabelProps={{ shrink: true }} value={formData.opening_date}
-                  onChange={handleChange}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={3}>
                 <TextField
                   fullWidth select label="دۆخی بەش" name="state" value={formData.state}
                   onChange={handleChange}
@@ -282,7 +241,7 @@ function BranchRegister({ isDrawerOpen }) {
                   <MenuItem value="ناچالاک">ناچالاک</MenuItem>
                 </TextField>
               </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={3}>
     <TextField
       fullWidth label="Latitude" name="latitude" value={formData.latitude}
       onChange={handleChange}
@@ -298,7 +257,7 @@ function BranchRegister({ isDrawerOpen }) {
       }}
     />
   </Grid>
-  <Grid item xs={12} md={4}>
+  <Grid item xs={12} md={3}>
     <TextField
       fullWidth label="Longitude" name="longitude" value={formData.longitude}
       onChange={handleChange}
@@ -314,7 +273,7 @@ function BranchRegister({ isDrawerOpen }) {
       }}
     />
   </Grid>
-  <Grid item xs={12} md={4}>
+  <Grid item xs={12} md={3}>
     <TextField
       fullWidth label="Radius (meters)" name="radius_meters" value={formData.radius_meters}
       onChange={handleChange}

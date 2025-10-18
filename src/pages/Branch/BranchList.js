@@ -50,7 +50,6 @@ function BranchList({ isDrawerOpen }) {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [selectedBranchId, setSelectedBranchId] = useState(null);
   const [filterCityId, setFilterCityId] = useState('');
-  const [filterRegionId, setFilterRegionId] = useState('');
   // user filter is currently read-only in the UI; keep the state value for query params
   const [filterUserId] = useState('');
   const [totalCount, setTotalCount] = useState(0);
@@ -60,7 +59,6 @@ function BranchList({ isDrawerOpen }) {
 
   // For filter dropdowns (fetch these from your API)
   const [cities, setCities] = useState([]);
-  const [regions, setRegions] = useState([]);
   const { company, fetchCompanyInfo } = useCompanyInfo();
 
   // For PDF report
@@ -71,12 +69,10 @@ function BranchList({ isDrawerOpen }) {
   useEffect(() => {
     const fetchDropdowns = async () => {
       try {
-        const [cityRes, regionRes] = await Promise.all([
+        const [cityRes] = await Promise.all([
           axiosInstance.get('/city/index'),
-          axiosInstance.get('/region/index'),
         ]);
         setCities(cityRes.data || []);
-        setRegions(regionRes.data || []);
       } catch {
         // ignore dropdown errors
       }
@@ -103,7 +99,6 @@ function BranchList({ isDrawerOpen }) {
         sortOrder: sortDirection,
         branch_name: searchQuery,
         city_id: filterCityId,
-        region_id: filterRegionId,
         user_id: filterUserId,
       };
       const response = await axiosInstance.get('/branch/filter', { params });
@@ -120,7 +115,7 @@ function BranchList({ isDrawerOpen }) {
   useEffect(() => {
     fetchBranches(currentPage, rowsPerPage, sortBy, sortOrder);
     // eslint-disable-next-line
-  }, [searchQuery, filterCityId, filterRegionId, filterUserId, currentPage, sortBy, sortOrder]);
+  }, [searchQuery, filterCityId, filterUserId, currentPage, sortBy, sortOrder]);
 
   const handleSort = (key) => {
     setSortBy(key);
@@ -172,7 +167,6 @@ function BranchList({ isDrawerOpen }) {
       const params = {
         branch_name: searchQuery,
         city_id: filterCityId,
-        region_id: filterRegionId,
         user_id: filterUserId,
         sortBy,
         sortOrder,
@@ -231,7 +225,7 @@ function BranchList({ isDrawerOpen }) {
       {/* Filter Section */}
       <Box sx={{ mb: 2 }}>
         <Grid container spacing={2}>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={6}>
             <TextField
               fullWidth
               label="گەڕان"
@@ -249,7 +243,7 @@ function BranchList({ isDrawerOpen }) {
               }}
             />
           </Grid>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={6}>
             <TextField
               select
               fullWidth
@@ -265,22 +259,7 @@ function BranchList({ isDrawerOpen }) {
               ))}
             </TextField>
           </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField
-              select
-              fullWidth
-              label="ناوچە"
-              value={filterRegionId}
-              onChange={e => { setFilterRegionId(e.target.value); setCurrentPage(1); }}
-            >
-              <MenuItem value="">هەموو</MenuItem>
-              {regions.map((region) => (
-                <MenuItem key={region.id} value={region.id}>
-                  {region.name}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
+
         </Grid>
       </Box>
 
@@ -305,15 +284,10 @@ function BranchList({ isDrawerOpen }) {
                 <TableCell onClick={() => handleSort('city_id')} sx={{ cursor: 'pointer' }}>
                   شار {getSortIcon('city_id')}
                 </TableCell>
-                <TableCell onClick={() => handleSort('region_id')} sx={{ cursor: 'pointer' }}>
-                  ناوچە {getSortIcon('region_id')}
-                </TableCell>
-                <TableCell>بەڕێوەبەر</TableCell>
+
                 <TableCell onClick={() => handleSort('wallet')} sx={{ cursor: 'pointer' }}>
                   قاصە {getSortIcon('wallet')}
                 </TableCell>
-                <TableCell>جۆر</TableCell>
-                <TableCell>ژمارەی مۆبایل</TableCell>
                 <TableCell>دۆخ</TableCell>
                 <TableCell>ناونیشان</TableCell>
                 <TableCell align="center">کردار</TableCell>
@@ -327,8 +301,6 @@ function BranchList({ isDrawerOpen }) {
                   <TableCell>{branch.name}</TableCell>
                   
                   <TableCell>{branch.city_name || '-'}</TableCell>
-                  <TableCell>{branch.region_name || '-'}</TableCell>
-                  <TableCell>{branch.user_name || '-'}</TableCell>
                   <TableCell>
                     <Typography
                       sx={{
@@ -338,8 +310,6 @@ function BranchList({ isDrawerOpen }) {
                       {Number(branch.wallet || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </Typography>
                   </TableCell>
-                  <TableCell>{branch.type || '-'}</TableCell>
-                  <TableCell>{branch.phone_1 || '-'}</TableCell>
                   <TableCell>{branch.state || '-'}</TableCell>
                   <TableCell
                     sx={{
@@ -363,7 +333,7 @@ function BranchList({ isDrawerOpen }) {
               ))}
               {!branches.length && (
                 <TableRow>
-                  <TableCell colSpan={12} align="center">
+                  <TableCell colSpan={8} align="center">
                     هیچ زانیارییەک نەدۆزرایەوە.
                   </TableCell>
                 </TableRow>
@@ -371,7 +341,7 @@ function BranchList({ isDrawerOpen }) {
             </TableBody>
             <TableFooter>
               <TableRow>
-                <TableCell colSpan={12} align="center" sx={{ background: '#f5f5f5', fontWeight: 'bold', fontSize: 16 }}>
+                <TableCell colSpan={8} align="center" sx={{ background: '#f5f5f5', fontWeight: 'bold', fontSize: 16 }}>
                   <span style={{ margin: '0 12px', color: '#222' }}>
                     کۆی گشتی لقەکان: <span style={{ fontWeight: 'bold', color: '#1976d2' }}>{totalBranchCount}</span>
                   </span>
@@ -416,12 +386,10 @@ function BranchList({ isDrawerOpen }) {
           <BranchInfoPDF
             branches={reportBranches}
             cities={cities}
-            regions={regions}
             company={company}
             filters={{
               branch_name: searchQuery,
               city_id: filterCityId,
-              region_id: filterRegionId,
               user_id: filterUserId,
             }}
           />
