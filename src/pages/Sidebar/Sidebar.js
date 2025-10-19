@@ -268,6 +268,9 @@ const Sidebar = () => {
                   <ListItem button component={Link} to="/printer/">
                   <ListItemText inset primary="پرینتەرەکان" sx={getTextStyles()} />
                 </ListItem>
+                   <ListItem button component={Link} to="/company-delivery/">
+                  <ListItemText inset primary="کۆمپانیاکانی گەیاندن" sx={getTextStyles()} />
+                </ListItem>
   
               </List>
               <Divider sx={{ backgroundColor: 'white' }} />

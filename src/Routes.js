@@ -45,6 +45,7 @@ const ItemCategoryManagment = lazy(() => import('./pages/Item/ItemCategoryManagm
 const ItemUnitManagment = lazy(() => import('./pages/Item/ItemUnitManagment'));
 const ItemTypePriceManagment = lazy(() => import('./pages/Item/ItemTypePriceManagment'));
 const ItemDamage = lazy(() => import('./pages/Item/ItemDamageManagment'));
+const CompanyDeliveryManagment = lazy(() => import('./pages/CompanyDelivery/CompanyDeliveryManagment'));
 
 
 const RoutesComponent = () => {
@@ -66,6 +67,8 @@ const RoutesComponent = () => {
         <Route path="/branch" element={<ProtectedRoute element={<BranchList />} />} />
         <Route path="/table" element={<ProtectedRoute element={<TableManagment />} />} />
         <Route path="/printer" element={<ProtectedRoute element={<PrinterManagment />} />} />
+        <Route path="/printer" element={<ProtectedRoute element={<PrinterManagment />} />} />
+        <Route path="/company-delivery" element={<ProtectedRoute element={<CompanyDeliveryManagment />} />} />
 
 
         {/* Customer category */}
