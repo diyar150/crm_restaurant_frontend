@@ -53,7 +53,6 @@ function ExpensesManagment({ isDrawerOpen }) {
     amount: '',
     note: '',
     branch_id: '',
-    currency_id: '',
     expense_date: today,
     search: '',
   };
@@ -66,7 +65,7 @@ function ExpensesManagment({ isDrawerOpen }) {
   const [branches, setBranches] = useState([]);
   const [categories, setCategories] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [currencies, setCurrencies] = useState([]);
+  // no currency on backend Expense model
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -85,13 +84,15 @@ function ExpensesManagment({ isDrawerOpen }) {
   const [sortBy, setSortBy] = useState('expense_date');
   const [sortOrder, setSortOrder] = useState('desc');
   const [reportExpenses, setReportExpenses] = useState([]);
-  const [totalSumByCurrency, setTotalSumByCurrency] = useState({});
+  const [totalSumByCurrency, setTotalSumByCurrency] = useState(0);
   const currentExpenses = expenses;
 
 
   // Fetch all data and initial expenses
   useEffect(() => {
-    setFormData((prev) => ({ ...initialFormData, user_id: getCurrentUserId() }));
+    // set both employee_id (UI select) and user_id (payload) to current user by default
+    const currentUser = getCurrentUserId();
+    setFormData((prev) => ({ ...initialFormData, user_id: currentUser, employee_id: currentUser }));
     fetchAllData();
     fetchExpenses();
     fetchCompanyInfo();
@@ -119,22 +120,13 @@ function ExpensesManagment({ isDrawerOpen }) {
       if (filterEmployeeId) params.employee_id = filterEmployeeId;
       if (filterCategoryId) params.category_id = filterCategoryId;
 
-      // Fetch all filtered expenses (no pagination)
+      // Fetch all filtered expenses (no pagination) and compute a single numeric total
       const response = await axiosInstance.get('/expenses/filter', { params });
       const allExpenses = response.data.expenses || [];
-      // Calculate sum by currency
-      const sums = {};
-      allExpenses.forEach((exp) => {
-        const currency = currencies.find((cur) => cur.id === exp.currency_id);
-        const symbol = currency?.symbol || '';
-        const key = symbol || exp.currency_id || '';
-        const amount = Number(exp.amount || 0);
-        if (!sums[key]) sums[key] = 0;
-        sums[key] += amount;
-      });
-      setTotalSumByCurrency(sums);
+      const total = allExpenses.reduce((acc, exp) => acc + Number(exp.amount || 0), 0);
+      setTotalSumByCurrency(total);
     } catch (error) {
-      setTotalSumByCurrency({});
+      setTotalSumByCurrency(0);
     }
   };
 
@@ -147,16 +139,14 @@ function ExpensesManagment({ isDrawerOpen }) {
   const fetchAllData = async () => {
     setFetching(true);
     try {
-      const [branchRes, employeeRes, categoryRes, currencyRes] = await Promise.all([
+      const [branchRes, employeeRes, categoryRes] = await Promise.all([
         axiosInstance.get('/branch/index'),
         axiosInstance.get('/user/index'),
         axiosInstance.get('/expenses-category/index'),
-        axiosInstance.get('/currency/index'),
       ]);
-      setBranches(branchRes.data || []);
-      setEmployees(employeeRes.data || []);
-      setCategories(categoryRes.data || []);
-      setCurrencies(currencyRes.data || []);
+  setBranches(branchRes.data || []);
+  setEmployees(employeeRes.data || []);
+  setCategories(categoryRes.data || []);
     } catch (error) {
       setErrorMessage('هەڵە ڕوویدا لە بارکردنی داتا');
     } finally {
@@ -192,7 +182,7 @@ function ExpensesManagment({ isDrawerOpen }) {
   };
 
   function formatNumberWithCommas(value) {
-    if (!value) return '';
+    if (value === undefined || value === null || value === '') return '';
     const parts = value.toString().split('.');
     parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     return parts.join('.');
@@ -267,13 +257,12 @@ function ExpensesManagment({ isDrawerOpen }) {
     setLoading(true);
     setErrorMessage('');
 
-    const errors = {};
-    if (!formData.employee_id) errors.employee_id = 'کارمەند دیاری بکە';
+  const errors = {};
+  // employee_id is optional now (backend supports employee_id nullable)
     if (!formData.category_id) errors.category_id = 'گرووپی مەسرووفات دیاری بکە';
     if (!formData.name) errors.name = 'ناوی مەسرووفات پێویستە';
     if (!formData.amount) errors.amount = 'بڕی مەسرووفات پێویستە';
     if (!formData.branch_id) errors.branch_id = 'لق دیاری بکە';
-    if (!formData.currency_id) errors.currency_id = 'دراو دیاری بکە';
     if (!formData.expense_date) errors.expense_date = 'بەرواری مەسرووفات پێویستە';
 
     setFormErrors(errors);
@@ -283,11 +272,17 @@ function ExpensesManagment({ isDrawerOpen }) {
     }
 
     try {
-      const { search, ...rest } = formData;
+  // build explicit payload that matches backend Expense model
+      // user_id = current authenticated user (actor), employee_id = selected employee (optional)
       const payload = {
-        ...rest,
-        user_id: getCurrentUserId(),
+        category_id: formData.category_id,
+        name: formData.name,
         amount: Number(formData.amount.toString().replace(/,/g, '')),
+        note: formData.note,
+        branch_id: formData.branch_id,
+        user_id: getCurrentUserId(),
+        employee_id: formData.employee_id || null,
+        expense_date: formData.expense_date,
       };
 
       let response;
@@ -300,7 +295,7 @@ function ExpensesManagment({ isDrawerOpen }) {
       if (response.status === 200 || response.status === 201) {
         setSuccess(true);
         setErrorMessage('');
-        setFormData({ ...initialFormData, user_id: getCurrentUserId() });
+        setFormData({ ...initialFormData, user_id: getCurrentUserId(), employee_id: getCurrentUserId() });
         setSelectedExpenseId(null);
         setFormErrors({});
         setCurrentPage(1);
@@ -331,14 +326,14 @@ function ExpensesManagment({ isDrawerOpen }) {
       const response = await axiosInstance.get(`/expenses/show/${expense.id}`);
       const data = response.data;
       setFormData({
-        employee_id: data.employee_id || '',
+        // prefer explicit employee_id if backend provides it, fall back to user_id
+        employee_id: data.employee_id || data.user_id || '',
         category_id: data.category_id || '',
         name: data.name || '',
         amount: data.amount ? data.amount.toString().replace(/,/g, '') : '',
         note: data.note || '',
         branch_id: data.branch_id || '',
-        user_id: getCurrentUserId(),
-        currency_id: data.currency_id || '',
+        user_id: data.user_id || getCurrentUserId(),
         expense_date: data.expense_date ? data.expense_date : today,
         search: '',
       });
@@ -438,25 +433,13 @@ function ExpensesManagment({ isDrawerOpen }) {
               {selectedExpenseId ? 'گۆڕینی مەسرووفات' : 'زیادکردنی مەسرووفات'}
             </Typography>
             <form onSubmit={handleSubmit}>
-              <TextField
-                select
-                fullWidth
-                label="کارمەند"
-                name="employee_id"
-                value={formData.employee_id}
-                onChange={handleChangeWithErrorReset}
-                error={!!formErrors.employee_id}
-                helperText={formErrors.employee_id}
-                sx={{ mb: 2 }}
-              >
-                {employees.map((emp) => (
-                  <MenuItem key={emp.id} value={emp.id}>
-                    {emp.name}
-                  </MenuItem>
-                ))}
-              </TextField>
 
-              <TextField
+       <Grid container spacing={2}>
+      
+
+           <Grid item xs={12}>
+
+             <TextField
                 select
                 fullWidth
                 label="گرووپ"
@@ -472,10 +455,17 @@ function ExpensesManagment({ isDrawerOpen }) {
                     {cat.name}
                   </MenuItem>
                 ))}
-              </TextField>
+            </TextField>
 
-              <TextField
-                fullWidth
+                </Grid>
+                  </Grid>
+         
+       <Grid container spacing={2}>
+
+              <Grid item xs={6}>
+
+               <TextField
+                    fullWidth
                 label="ناوی مەسرووف"
                 name="name"
                 value={formData.name}
@@ -491,12 +481,16 @@ function ExpensesManagment({ isDrawerOpen }) {
                       </IconButton>
                     </InputAdornment>
                   ),
-                }}
-              />
+                 }}
+               />
 
-              <Grid container spacing={2} sx={{ mb: 2 }}>
-                <Grid item xs={8}>
-                  <TextField
+                </Grid>
+
+             
+                  
+                <Grid item xs={6}>
+
+                   <TextField
                     fullWidth
                     label="بڕ"
                     name="amount"
@@ -522,26 +516,10 @@ function ExpensesManagment({ isDrawerOpen }) {
                       ),
                     }}
                   />
+
                 </Grid>
-                <Grid item xs={4}>
-                  <TextField
-                    select
-                    fullWidth
-                    label="دراو"
-                    name="currency_id"
-                    value={formData.currency_id}
-                    onChange={handleChangeWithErrorReset}
-                    error={!!formErrors.currency_id}
-                    helperText={formErrors.currency_id}
-                  >
-                    {currencies.map((cur) => (
-                      <MenuItem key={cur.id} value={cur.id}>
-                        {cur.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
                 </Grid>
-              </Grid>
+                    
 
               <TextField
                 fullWidth
@@ -829,7 +807,7 @@ function ExpensesManagment({ isDrawerOpen }) {
                         </TableCell>
                         <TableCell>{expense.name}</TableCell>
                         <TableCell>
-                          {formatNumberWithCommas(expense.amount)} {currencies.find((c) => c.id === expense.currency_id)?.symbol || ''}
+                          {formatNumberWithCommas(expense.amount)}
                         </TableCell>
                         <TableCell>
                           {employees.find((e) => e.id === expense.employee_id)?.name || expense.employee_id}
@@ -893,12 +871,11 @@ function ExpensesManagment({ isDrawerOpen }) {
         open={openPdfPreview}
         onClose={() => setOpenPdfPreview(false)}
         document={
-          <ExpensesPDF
+            <ExpensesPDF
             expenses={reportExpenses}
             categories={categories}
             branches={branches}
             employees={employees}
-            currencies={currencies}
             company={company}
               filters={{
               branch: filterBranchId,
