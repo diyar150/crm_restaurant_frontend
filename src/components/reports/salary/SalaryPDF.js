@@ -146,18 +146,9 @@ function formatNumberWithCommas(value) {
   return Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// Sum by currency
-function getSumByCurrency(salaries, currencies) {
-  const sums = {};
-  salaries.forEach(sal => {
-    const currency = currencies.find(cur => cur.id === sal.currency_id);
-    const symbol = currency?.symbol || '';
-    const key = symbol || sal.currency_id || '';
-    const amount = Number(sal.amount || 0);
-    if (!sums[key]) sums[key] = 0;
-    sums[key] += amount;
-  });
-  return sums;
+// Total sum of amounts (no currency grouping)
+function getTotalSum(salaries) {
+  return salaries.reduce((acc, s) => acc + Number(s.amount || 0), 0);
 }
 
 const SalaryPDF = ({
@@ -168,7 +159,7 @@ const SalaryPDF = ({
   company,
   filters = {},
 }) => {
-  const sumByCurrency = getSumByCurrency(salaries, currencies);
+  const totalSum = getTotalSum(salaries);
 
   // Prepare filter display
   const filterTexts = [];
@@ -219,7 +210,7 @@ const SalaryPDF = ({
                 {employees.find(e => e.id === salary.employee_id)?.name || salary.employee_id}
               </Text>
               <Text style={[styles.cell, styles.col3]}>
-                {(currencies.find(cur => cur.id === salary.currency_id)?.symbol || '') + formatNumberWithCommas(salary.amount)}
+                {formatNumberWithCommas(salary.amount)}
               </Text>
               <Text style={[styles.cell, styles.col5]}>{salary.salary_period_start}</Text>
               <Text style={[styles.cell, styles.col6]}>{salary.salary_period_end}</Text>
@@ -233,14 +224,7 @@ const SalaryPDF = ({
           {/* Sum row */}
           <View style={styles.sumRow}>
             <Text style={styles.sumTitle}>کۆی گشتی</Text>
-            <Text style={styles.sumText}>
-              {Object.entries(sumByCurrency).map(([symbol, total], idx, arr) => (
-                <Text key={symbol} style={{ marginHorizontal: 1 }}>
-                  {symbol}{formatNumberWithCommas(total)}
-                  {idx < arr.length - 1 ? ' | ' : ''}
-                </Text>
-              ))}
-            </Text>
+            <Text style={styles.sumText}>{formatNumberWithCommas(totalSum)}</Text>
           </View>
         </View>
 

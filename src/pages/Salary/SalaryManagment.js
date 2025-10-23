@@ -54,7 +54,6 @@ function SalaryManagment({ isDrawerOpen }) {
     note: '',
     user_id: '',
     branch_id: '',
-    currency_id: '',
     search: '',
   };
 
@@ -65,7 +64,6 @@ function SalaryManagment({ isDrawerOpen }) {
   const [salaries, setSalaries] = useState([]);
   const [branches, setBranches] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [currencies, setCurrencies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -82,7 +80,7 @@ function SalaryManagment({ isDrawerOpen }) {
   const [openPdfPreview, setOpenPdfPreview] = useState(false);
   const [reportSalaries, setReportSalaries] = useState([]);
   const { company, fetchCompanyInfo } = useCompanyInfo();
-  const [totalSumByCurrency, setTotalSumByCurrency] = useState({});
+  const [totalSum, setTotalSum] = useState(0);
 
   // --- Effects ---
 
@@ -104,12 +102,12 @@ function SalaryManagment({ isDrawerOpen }) {
     setCurrentPage(1);
     setSalaries([]);
     setTotalCount(0);
-    setTotalSumByCurrency({});
+  setTotalSum(0);
     return;
   }
   const timeout = setTimeout(() => {
     handleFilter(currentPage, rowsPerPage, sortBy, sortOrder);
-    fetchTotalSumByCurrency(); // <-- Add this line
+    fetchTotalSum();
   }, 400);
   return () => clearTimeout(timeout);
   // eslint-disable-next-line
@@ -121,14 +119,12 @@ function SalaryManagment({ isDrawerOpen }) {
   const fetchAllData = async () => {
     setFetching(true);
     try {
-      const [branchRes, employeeRes, currencyRes] = await Promise.all([
+      const [branchRes, employeeRes] = await Promise.all([
         axiosInstance.get('/branch/index'),
         axiosInstance.get('/user/index'),
-        axiosInstance.get('/currency/index'),
       ]);
       setBranches(branchRes.data || []);
       setEmployees(employeeRes.data || []);
-      setCurrencies(currencyRes.data || []);
     } catch (error) {
       setErrorMessage('هەڵە ڕوویدا لە بارکردنی داتا');
     } finally {
@@ -138,33 +134,20 @@ function SalaryManagment({ isDrawerOpen }) {
 
 
 // Fetch all filtered salaries and calculate sum
-const fetchTotalSumByCurrency = async () => {
+const fetchTotalSum = async () => {
   try {
-    const params = {
-      sortBy,
-      sortOrder,
-    };
+    const params = { sortBy, sortOrder };
     if (filterEmployee) params.employee_id = filterEmployee;
     if (filterBranch) params.branch_id = filterBranch;
     if (filterDateRange.start) params.startDate = filterDateRange.start;
     if (filterDateRange.end) params.endDate = filterDateRange.end;
 
-    // Fetch all filtered salaries (no pagination)
     const response = await axiosInstance.get('/salary/filter', { params });
     const allSalaries = response.data.salaries || [];
-    // Calculate sum by currency
-    const sums = {};
-    allSalaries.forEach((sal) => {
-      const currency = currencies.find((cur) => cur.id === sal.currency_id);
-      const symbol = currency?.symbol || '';
-      const key = symbol || sal.currency_id || '';
-      const amount = Number(sal.amount || 0);
-      if (!sums[key]) sums[key] = 0;
-      sums[key] += amount;
-    });
-    setTotalSumByCurrency(sums);
+    const total = allSalaries.reduce((acc, s) => acc + Number(s.amount || 0), 0);
+    setTotalSum(total);
   } catch (error) {
-    setTotalSumByCurrency({});
+    setTotalSum(0);
   }
 };
 
@@ -309,7 +292,7 @@ const fetchTotalSumByCurrency = async () => {
     if (!formData.employee_id) errors.employee_id = 'کارمەند دیاری بکە';
     if (!formData.amount || isNaN(Number(formData.amount.toString().replace(/,/g, '')))) errors.amount = 'بڕی مووچە پێویستە';
     if (!formData.branch_id) errors.branch_id = 'لق دیاری بکە';
-    if (!formData.currency_id) errors.currency_id = 'دراو دیاری بکە';
+  // currency_id removed — amounts are in base currency
 
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) {
@@ -329,15 +312,12 @@ const fetchTotalSumByCurrency = async () => {
       if (response.status === 200 || response.status === 201) {
         setSuccess(true);
         setErrorMessage('');
-        setFormData({
-          ...initialFormData,
-          user_id: getCurrentUserId(),
-        });
+        setFormData({ ...initialFormData, user_id: getCurrentUserId() });
         setSelectedSalaryId(null);
         setFormErrors({});
         setCurrentPage(1);
         handleFilter(1, rowsPerPage, sortBy, sortOrder);
-          fetchTotalSumByCurrency(); // <-- Add this line
+          fetchTotalSum();
 
       }
     } catch (error) {
@@ -365,7 +345,6 @@ const fetchTotalSumByCurrency = async () => {
         note: data.note || '',
         user_id: data.user_id || '',
         branch_id: data.branch_id || '',
-        currency_id: data.currency_id || '',
         search: '',
       });
     } catch (error) {
@@ -396,7 +375,7 @@ const fetchTotalSumByCurrency = async () => {
         setSelectedSalaryId(null);
         setFormErrors({});
         handleFilter(currentPage, rowsPerPage, sortBy, sortOrder);
-          fetchTotalSumByCurrency(); // <-- Add this line
+          fetchTotalSum();
 
       }
     } catch (error) {
@@ -445,7 +424,7 @@ const fetchTotalSumByCurrency = async () => {
               </TextField>
 
               <Grid container spacing={2} sx={{ mb: 2 }}>
-                <Grid item xs={8}>
+                <Grid item xs={12}>
                   <TextField
                     fullWidth
                     label="بڕی مووچە"
@@ -472,24 +451,7 @@ const fetchTotalSumByCurrency = async () => {
                     }}
                   />
                 </Grid>
-                <Grid item xs={4}>
-                  <TextField
-                    select
-                    fullWidth
-                    label="دراو"
-                    name="currency_id"
-                    value={formData.currency_id}
-                    onChange={handleChangeWithErrorReset}
-                    error={!!formErrors.currency_id}
-                    helperText={formErrors.currency_id}
-                  >
-                    {currencies.map((cur) => (
-                      <MenuItem key={cur.id} value={cur.id}>
-                        {cur.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
+                {/* currency selection removed — amounts are base currency */}
               </Grid>
 
               <TextField
@@ -560,7 +522,7 @@ const fetchTotalSumByCurrency = async () => {
                     setFilterDateRange({ mode: 'today', start: today, end: today });
                     setCurrentPage(1);
                     handleFilter(1, rowsPerPage, sortBy, sortOrder);
-                    fetchTotalSumByCurrency();
+                    fetchTotalSum();
                   }}
                   fullWidth
                 />
@@ -690,7 +652,7 @@ const fetchTotalSumByCurrency = async () => {
                           {employees.find((e) => e.id === salary.employee_id)?.name || salary.employee_id}
                         </TableCell>
                         <TableCell>
-                          {formatNumberWithCommas(salary.amount)} {currencies.find((c) => c.id === salary.currency_id)?.symbol || ''}
+                          {formatNumberWithCommas(salary.amount)}
                         </TableCell>
                         <TableCell>{formatDate(salary.salary_period_start)}</TableCell>
                         <TableCell>{formatDate(salary.salary_period_end)}</TableCell>
@@ -725,11 +687,7 @@ const fetchTotalSumByCurrency = async () => {
                       کۆی گشتی بڕ:
                     </TableCell>
                     <TableCell colSpan={7} align="left" sx={{ fontWeight: 'bold' }}>
-                      {Object.entries(totalSumByCurrency).map(([symbol, total]) => (
-                        <span key={symbol} style={{ marginRight: 16 }}>
-                          {symbol}{formatNumberWithCommas(total)}
-                        </span>
-                      ))}
+                      {formatNumberWithCommas(totalSum)}
                     </TableCell>
                   </TableRow>
                 </TableFooter>
@@ -771,7 +729,6 @@ const fetchTotalSumByCurrency = async () => {
             salaries={reportSalaries}
             employees={employees}
             branches={branches}
-            currencies={currencies}
             company={company}
              filters={{
               employee: filterEmployee,
