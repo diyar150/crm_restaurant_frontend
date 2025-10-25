@@ -131,6 +131,7 @@ const Sidebar = () => {
                 <ListItem button component={Link} to="/sell-invoice">
                   <ListItemText inset primary="فرۆشتنەکان" sx={getTextStyles()} />
                 </ListItem>
+   
 
               </List>
               <Divider sx={{ backgroundColor: 'white' }} />
@@ -163,11 +164,11 @@ const Sidebar = () => {
               <Divider sx={{ backgroundColor: 'white' }} />
             </Collapse>
 
-            <ListItem button component={Link} to="/contact">
+            <ListItem button component={Link} to="/appointment">
               <ListItemIcon sx={{ color: 'white' }}>
                 <ContactMail />
               </ListItemIcon>
-              <ListItemText primary="Contact" sx={getTextStyles()} />
+              <ListItemText primary="حیجزکردن" sx={getTextStyles()} />
             </ListItem>
             <Divider sx={{ backgroundColor: 'white' }} />
 

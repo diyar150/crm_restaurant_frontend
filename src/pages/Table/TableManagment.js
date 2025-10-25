@@ -81,7 +81,7 @@ function TableManagment({ isDrawerOpen }) {
 
     const errors = {};
     // Validate branch selection
-    if (!formData.branch_id || formData.branch_id === '0') errors.branch_id = 'ناوی کۆمپانیا/بەش پێویستە دیاریکرابێت';
+    if (!formData.branch_id || formData.branch_id === '0') errors.branch_id = 'ناوی لق پێویستە هەڵبژێردرێت';
     // Table number must be provided and not "0"
     if (!formData.table_number || String(formData.table_number).trim() === '' || String(formData.table_number).trim() === '0')
       errors.table_number = 'ژمارەی میز پێویستە بنووسرێت';
@@ -196,7 +196,7 @@ function TableManagment({ isDrawerOpen }) {
                 <TextField
                   select
                   fullWidth
-                  label="کۆمپانیا / بەش"
+                  label="ناوی لق"
                   name="branch_id"
                   value={formData.branch_id}
                   onChange={handleChangeWithErrorReset}

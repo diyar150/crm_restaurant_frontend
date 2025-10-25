@@ -33,6 +33,9 @@ const TableManagment = lazy(() => import('./pages/Table/TableManagment'));
 // Printer management
 const PrinterManagment = lazy(() => import('./pages/Printer/PrinterManagment'));
 
+// Appointment management
+const AppointmentManagment = lazy(() => import('./pages/Appointment/AppointmentManagment'));
+
 // Sell invoice
 
 const SellCreate = lazy(() => import('./pages/Sell/SellCreate'));
@@ -85,10 +88,14 @@ const RoutesComponent = () => {
         {/* Salary management */}
         <Route path="/salary" element={<ProtectedRoute element={<SalaryManagment />} />} />
 
-    {/* Expenses managment */}
+     {/* Expenses managment */}
 
         <Route path="/expenses" element={<ProtectedRoute element={<ExpensesManagment />} />} />
         <Route path="/expenses/category" element={<ProtectedRoute element={<ExpensesCategoryManagment />} />} />
+
+        {/* Appointment management */}
+        <Route path="/appointment" element={<ProtectedRoute element={<AppointmentManagment />} />} />
+
 
         {/* Item management */}
         <Route path="/item" element={<ProtectedRoute element={<ItemManagment />} />} />
