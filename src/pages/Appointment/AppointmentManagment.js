@@ -46,7 +46,7 @@ function AppointmentManagment({ isDrawerOpen }) {
     customer_name: '',
     customer_phone: '',
     name: '',
-    description: '',
+    table_id: '',
     note: '',
     branch_id: '',
     employee_id: '',
@@ -63,6 +63,8 @@ function AppointmentManagment({ isDrawerOpen }) {
   const [appointments, setAppointments] = useState([]);
   const [branches, setBranches] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [tables, setTables] = useState([]);
+  const [filterTableId, setFilterTableId] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -89,15 +91,18 @@ function AppointmentManagment({ isDrawerOpen }) {
     // eslint-disable-next-line
   }, []);
 
-  const fetchAllData = async () => {
+    const fetchAllData = async () => {
     setFetching(true);
     try {
-      const [branchRes, employeeRes] = await Promise.all([
+      const results = await Promise.allSettled([
         axiosInstance.get('/branch/index'),
         axiosInstance.get('/user/index'),
+        axiosInstance.get('/table/index'),
       ]);
-      setBranches(branchRes.data || []);
-      setEmployees(employeeRes.data || []);
+      
+      if (results[0].status === 'fulfilled') setBranches(results[0].value.data || []);
+      if (results[1].status === 'fulfilled') setEmployees(results[1].value.data || []);
+      if (results[2].status === 'fulfilled') setTables(results[2].value.data || []);
     } catch (error) {
       setErrorMessage('هەڵە ڕوویدا لە بارکردنی داتا');
     } finally {
@@ -105,11 +110,12 @@ function AppointmentManagment({ isDrawerOpen }) {
     }
   };
 
-  const fetchAppointments = async (
+   const fetchAppointments = async (
     searchValue = '',
     dateRange = filterDateRange,
     branchId = filterBranchId,
     employeeId = filterEmployeeId,
+    tableId = filterTableId,
     page = currentPage,
     pageSize = rowsPerPage,
     sortField = sortBy,
@@ -123,18 +129,22 @@ function AppointmentManagment({ isDrawerOpen }) {
         sortBy: sortField,
         sortOrder: sortDirection,
       };
+      
       if (searchValue.trim()) {
         params.name = searchValue;
         params.customer_name = searchValue;
         params.customer_phone = searchValue;
+        
         if (!isNaN(searchValue)) {
           params.id = searchValue;
         }
       }
+      
       if (dateRange.start) params.startDate = dateRange.start;
       if (dateRange.end) params.endDate = dateRange.end;
       if (branchId) params.branch_id = branchId;
       if (employeeId) params.employee_id = employeeId;
+      if (tableId) params.table_id = tableId;
 
       const response = await axiosInstance.get('/appointment/filter', { params });
       setAppointments(response.data.appointments || []);
@@ -146,17 +156,17 @@ function AppointmentManagment({ isDrawerOpen }) {
     }
   };
 
-  const handleDateRangeChange = (range) => {
+    const handleDateRangeChange = (range) => {
     setFilterDateRange(range);
     setCurrentPage(1);
-    fetchAppointments(search, range, filterBranchId, filterEmployeeId, 1);
+    fetchAppointments(search, range, filterBranchId, filterEmployeeId, filterTableId, 1);
   };
 
-  const handleSearchChange = (e) => {
+    const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearch(value);
     setCurrentPage(1);
-    fetchAppointments(value, filterDateRange, filterBranchId, filterEmployeeId, 1);
+    fetchAppointments(value, filterDateRange, filterBranchId, filterEmployeeId, filterTableId, 1);
   };
 
   const handleSubmit = async (e) => {
@@ -177,11 +187,11 @@ function AppointmentManagment({ isDrawerOpen }) {
     }
 
     try {
-        const payload = {
+           const payload = {
         customer_name: formData.customer_name,
         customer_phone: formData.customer_phone,
         name: formData.name,
-        description: formData.description,
+        table_id: formData.table_id || null,
         note: formData.note,
         branch_id: formData.branch_id,
         user_id: getCurrentUserId(),
@@ -210,6 +220,7 @@ function AppointmentManagment({ isDrawerOpen }) {
           filterDateRange,
           filterBranchId,
           filterEmployeeId,
+           filterTableId,
           1
         );
       }
@@ -229,11 +240,11 @@ function AppointmentManagment({ isDrawerOpen }) {
     try {
       const response = await axiosInstance.get(`/appointment/show/${item.id}`);
       const data = response.data;
-       setFormData({
+     setFormData({
         customer_name: data.customer_name || '',
         customer_phone: data.customer_phone || '',
         name: data.name || '',
-        description: data.description || '',
+        table_id: data.table_id || '',
         note: data.note || '',
         branch_id: data.branch_id || '',
         employee_id: data.employee_id || data.user_id || '',
@@ -267,11 +278,12 @@ function AppointmentManagment({ isDrawerOpen }) {
         setSelectedId(null);
         setFormErrors({});
         setCurrentPage(1);
-        fetchAppointments(
+         fetchAppointments(
           search,
           filterDateRange,
           filterBranchId,
           filterEmployeeId,
+          filterTableId,
           1
         );
       }
@@ -282,11 +294,12 @@ function AppointmentManagment({ isDrawerOpen }) {
 
   const handlePageChange = (_, value) => {
     setCurrentPage(value);
-    fetchAppointments(
+      fetchAppointments(
       search,
       filterDateRange,
       filterBranchId,
       filterEmployeeId,
+      filterTableId,
       value,
       rowsPerPage
     );
@@ -306,6 +319,7 @@ function AppointmentManagment({ isDrawerOpen }) {
       filterDateRange,
       filterBranchId,
       filterEmployeeId,
+      filterTableId,
       1,
       rowsPerPage,
       field,
@@ -319,10 +333,40 @@ function AppointmentManagment({ isDrawerOpen }) {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const clearSelectField = (field) => {
+
+    const clearSelectField = (field) => {
     setFormData((prev) => ({ ...prev, [field]: '' }));
     setFormErrors((prevErrors) => ({ ...prevErrors, [field]: '' }));
   };
+
+  // Helper function to calculate duration between two times
+  const calculateDuration = (startTime, endTime) => {
+    if (!startTime || !endTime) return '-';
+    
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    
+    let totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+    
+    // Handle case where end time is next day (negative duration)
+    if (totalMinutes < 0) {
+      totalMinutes += 24 * 60;
+    }
+    
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    
+    if (hours === 0) {
+      return `${minutes} خولەک`;
+    } else if (minutes === 0) {
+      return `${hours} کاتژمێر`;
+    } else {
+      return `${hours} کاتژمێر و ${minutes} خولەک`;
+    }
+  };
+
+
+
 
   return (
     <Box sx={{ marginRight: isDrawerOpen ? '250px' : '0', transition: 'margin-right 0.3s' }}>
@@ -338,7 +382,7 @@ function AppointmentManagment({ isDrawerOpen }) {
             <form onSubmit={handleSubmit}>
               <Grid container spacing={2}>
 
-                <Grid item xs={12}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
                     label="ناوی کڕیار"
@@ -360,7 +404,7 @@ function AppointmentManagment({ isDrawerOpen }) {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
                     label="ژمارەی مۆبایل"
@@ -373,7 +417,7 @@ function AppointmentManagment({ isDrawerOpen }) {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
                     label="جۆر"
@@ -384,28 +428,26 @@ function AppointmentManagment({ isDrawerOpen }) {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                
+                <Grid item xs={12} md={6}>
                   <TextField
+                    select
                     fullWidth
-                    label="زانیاری زیاتر"
-                    name="description"
-                    value={formData.description}
+                    label="مێز"
+                    name="table_id"
+                    value={formData.table_id}
                     onChange={handleChangeWithErrorReset}
-                  
-                  />
+                  >
+                    <MenuItem value="">ژمارەی مێز</MenuItem>
+                    {tables
+                      .filter(t => !formData.branch_id || t.branch_id === formData.branch_id)
+                      .map((table) => (
+                        <MenuItem key={table.id} value={table.id}>
+                          {table.table_number} ({table.capacity} کەس)
+                        </MenuItem>
+                      ))}
+                  </TextField>
                 </Grid>
-
-             <Grid item xs={12}>
-                          <TextField
-                  fullWidth
-                  label="تێبینی"
-                  name="note"
-                  value={formData.note}
-                  onChange={handleChangeWithErrorReset}
-                    
-                />
-           </Grid>
-              
 
                <Grid item xs={12} md={6}>
                     <TextField
@@ -443,6 +485,17 @@ function AppointmentManagment({ isDrawerOpen }) {
                       ))}
                     </TextField>
                   </Grid>
+
+                   <Grid item xs={12}>
+                          <TextField
+                  fullWidth
+                  label="تێبینی"
+                  name="note"
+                  value={formData.note}
+                  onChange={handleChangeWithErrorReset}
+                    
+                />
+           </Grid>
            
              <Grid item xs={12}>
 
@@ -492,7 +545,7 @@ function AppointmentManagment({ isDrawerOpen }) {
                   </Grid>
                   <Grid item xs={4}>
                     <ClearButton
-                      onClick={() => {
+                         onClick={() => {
                         setFormData({ ...initialFormData, user_id: getCurrentUserId() });
                         setFormErrors({});
                         setSelectedId(null);
@@ -500,18 +553,13 @@ function AppointmentManagment({ isDrawerOpen }) {
                         setSearch('');
                         setFilterBranchId('');
                         setFilterEmployeeId('');
+                        setFilterTableId('');
                         const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
                           .toISOString()
                           .slice(0, 10);
                         setFilterDateRange({ mode: 'today', start: today, end: today });
                         setCurrentPage(1);
-                        fetchAppointments(
-                          '', // search
-                          filterDateRange,
-                          '', // branch
-                          '', // employee
-                          1 // page
-                        );
+                        fetchAppointments('', filterDateRange, '', '', '', 1);
                       }}
                       fullWidth
                     />
@@ -528,19 +576,22 @@ function AppointmentManagment({ isDrawerOpen }) {
             {/* Search/Filter Controls */}
             <Box sx={{ mb: 2 }}>
               <Grid container spacing={2}>
-                <Grid item xs={12} md={4}>
+                   <Grid item xs={12} md={4}>
                   <TextField
                     fullWidth
                     label="گەڕان"
                     name="search"
                     value={search}
                     onChange={handleSearchChange}
-                    placeholder="ناو یان تێبینی..."
+                    placeholder="گەڕان"
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
                           <Tooltip title="هەموو داتاکان">
-                            <IconButton onClick={() => { setSearch(''); fetchAppointments(); }}>
+                            <IconButton onClick={() => { 
+                              setSearch(''); 
+                              fetchAppointments('', filterDateRange, filterBranchId, filterEmployeeId, filterTableId, 1); 
+                            }}>
                               <SearchIcon />
                             </IconButton>
                           </Tooltip>
@@ -549,7 +600,7 @@ function AppointmentManagment({ isDrawerOpen }) {
                     }}
                   />
                 </Grid>
-                <Grid item xs={12} md={4}>
+               <Grid item xs={12} md={4}>
                   <TextField
                     select
                     fullWidth
@@ -558,7 +609,7 @@ function AppointmentManagment({ isDrawerOpen }) {
                     onChange={e => {
                       setFilterBranchId(e.target.value);
                       setCurrentPage(1);
-                      fetchAppointments(search, filterDateRange, e.target.value, filterEmployeeId, 1);
+                      fetchAppointments(search, filterDateRange, e.target.value, filterEmployeeId, filterTableId, 1);
                     }}
                   >
                     <MenuItem value="">هەموو لقەکان</MenuItem>
@@ -567,7 +618,7 @@ function AppointmentManagment({ isDrawerOpen }) {
                     ))}
                   </TextField>
                 </Grid>
-                <Grid item xs={12} md={4}>
+               <Grid item xs={12} md={4}>
                   <TextField
                     select
                     fullWidth
@@ -576,12 +627,32 @@ function AppointmentManagment({ isDrawerOpen }) {
                     onChange={e => {
                       setFilterEmployeeId(e.target.value);
                       setCurrentPage(1);
-                      fetchAppointments(search, filterDateRange, filterBranchId, e.target.value, 1);
+                      fetchAppointments(search, filterDateRange, filterBranchId, e.target.value, filterTableId, 1);
                     }}
                   >
                     <MenuItem value="">هەموو کارمەندان</MenuItem>
                     {employees.map(emp => (
                       <MenuItem key={emp.id} value={emp.id}>{emp.name}</MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                 <Grid item xs={12} md={4}>
+                  <TextField
+                    select
+                    fullWidth
+                    label="مێز"
+                    value={filterTableId || ''}
+                    onChange={e => {
+                      setFilterTableId(e.target.value);
+                      setCurrentPage(1);
+                      fetchAppointments(search, filterDateRange, filterBranchId, filterEmployeeId, e.target.value, 1);
+                    }}
+                  >
+                    <MenuItem value="">هەموو مێزەکان</MenuItem>
+                    {tables.map(table => (
+                      <MenuItem key={table.id} value={table.id}>
+                        {table.table_number}
+                      </MenuItem>
                     ))}
                   </TextField>
                 </Grid>
@@ -598,12 +669,13 @@ function AppointmentManagment({ isDrawerOpen }) {
                     <TableCell>#</TableCell>
                     <TableCell>ناوی کڕیار</TableCell>
                     <TableCell>ژمارەی مۆبایل</TableCell>
-                    <TableCell>جۆر</TableCell>
+                    <TableCell>مێز</TableCell>
                     <TableCell>تێبینی</TableCell>
                     <TableCell>لق</TableCell>
                     <TableCell>کارمەند</TableCell>
                     <TableCell>بەروار</TableCell>
                     <TableCell>کات</TableCell>
+                    <TableCell>ماوەی مانەوە</TableCell>
                     <TableCell>ئیش</TableCell>
                   </TableRow>
                 </TableHead>
@@ -620,12 +692,16 @@ function AppointmentManagment({ isDrawerOpen }) {
                         <TableCell>{a.id}</TableCell>
                         <TableCell>{a.customer_name}</TableCell>
                         <TableCell>{a.customer_phone}</TableCell>
-                        <TableCell>{a.description}</TableCell>
+                         <TableCell sx={{ color: 'red', fontWeight: 'bold' }}>
+                          {a.table_number || '-'}
+                        </TableCell>
                         <TableCell>{a.note}</TableCell>
                         <TableCell>{branches.find((b) => b.id === a.branch_id)?.name || a.branch_id}</TableCell>
                         <TableCell>{employees.find((e) => e.id === a.employee_id)?.name || a.employee_id}</TableCell>
                         <TableCell>{a.appointment_date ? new Date(a.appointment_date).toLocaleDateString('en-GB') : ''}</TableCell>
                         <TableCell>{(a.start_time || '') + (a.end_time ? ` - ${a.end_time}` : '')}</TableCell>
+                       <TableCell>{calculateDuration(a.start_time, a.end_time)}</TableCell>
+
                         <TableCell>
                           <IconButton color="primary" onClick={() => handleEditClick(a)}>
                             <EditIcon />
